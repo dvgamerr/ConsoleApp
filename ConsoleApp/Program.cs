@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace ConsoleApp
@@ -9,6 +10,10 @@ namespace ConsoleApp
         static bool IsDebug = false;
         static bool IsWaitForClose = false;
         static bool IsWaitCompleted = false;
+
+        [DllImport("kernel32")]
+        private static extern bool SetConsoleCtrlHandler(ConsoleEventDelegate callback, bool add);
+        private delegate bool ConsoleEventDelegate(CtrlType eventType);
 
         static void WatchFile()
         {
@@ -38,21 +43,19 @@ namespace ConsoleApp
 
                 Log("sConfig: {0}", sConfigFile);
                 Log("IsDebug: {0}", IsDebug);
-                if (IsDebug)
-                {
-                    Log("--> Please any key to Start Program.");
-                    Console.ReadKey();
-                }
+
+                ConsoleEventDelegate handler = new ConsoleEventDelegate(ConsoleCloseEventCallback);
+                SetConsoleCtrlHandler(handler, true);
+
                 Log("");
                 Log("Program Processing...");
                 Log("");
                 do
                 {
                     WatchFile();
-
                     while(IsWaitForClose)
                     {
-                        Thread.Sleep(1);
+                        Thread.Sleep(200);
                         if (IsWaitCompleted) break;
                     }
                     if (IsWaitCompleted) break;
@@ -94,5 +97,23 @@ namespace ConsoleApp
                 Console.ReadKey();
             }
         }
+
+        public enum CtrlType
+        {
+            CTRL_C_EVENT = 0,
+            CTRL_BREAK_EVENT,
+            CTRL_CLOSE_EVENT,
+            CTRL_LOGOFF_EVENT = 5,
+            CTRL_SHUTDOWN_EVENT
+        }
+
+        static bool ConsoleCloseEventCallback(CtrlType eventType)
+        {
+            Console.WriteLine(eventType.ToString() + " Console window closing, death imminent");
+            IsWaitCompleted = true;
+            return true;
+        }
+
+
     }
 }
