@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Net.Http;
 
 namespace ConsoleApp
 {
@@ -10,6 +11,7 @@ namespace ConsoleApp
         static bool IsDebug = false;
         static bool IsWaitForClose = false;
         static bool IsWaitCompleted = false;
+        static int nIntervelTime = 3600000;
 
         [DllImport("kernel32")]
         private static extern bool SetConsoleCtrlHandler(ConsoleEventDelegate callback, bool add);
@@ -17,7 +19,10 @@ namespace ConsoleApp
 
         static void WatchFile()
         {
-
+            var req = new HttpClient();
+            var res = req.GetAsync(new Uri("https://api.ipify.org?format=json"));
+            res.Wait();
+            Console.WriteLine("HttpClient: {0}", res.Result);
         }
         static void Main(string[] args)
         {
@@ -59,7 +64,7 @@ namespace ConsoleApp
                         if (IsWaitCompleted) break;
                     }
                     if (IsWaitCompleted) break;
-                    Thread.Sleep(1);
+                    Thread.Sleep(Program.nIntervelTime);
                 } while (true);
             }
             catch (Exception ex)
@@ -94,7 +99,6 @@ namespace ConsoleApp
                 Log(ex.Message);
                 Log("---------------------------------------------------------------------");
                 Log("--> Next, please any key.");
-                Console.ReadKey();
             }
         }
 
