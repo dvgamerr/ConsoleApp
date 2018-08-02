@@ -1,8 +1,9 @@
 ﻿using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Net.Http;
+using ADONetHelper.SqlServer;
 
 namespace ConsoleApp
 {
@@ -12,17 +13,25 @@ namespace ConsoleApp
         static bool IsWaitForClose = false;
         static bool IsWaitCompleted = false;
         static int nIntervelTime = 3600000;
+        static SqlServerClient cDB;
 
         [DllImport("kernel32")]
         private static extern bool SetConsoleCtrlHandler(ConsoleEventDelegate callback, bool add);
         private delegate bool ConsoleEventDelegate(CtrlType eventType);
 
-        static void WatchFile()
+        static void onStart()
         {
-            var req = new HttpClient();
-            var res = req.GetAsync(new Uri("https://api.ipify.org?format=json"));
-            res.Wait();
-            Console.WriteLine("HttpClient: {0}", res.Result);
+            // "User ID=" + sUser + ";Initial Catalog=" + sName + ";Data Source=" + sDataSource + ";Password=" + sPassword;
+            //cDB = new SqlServerClient("");
+        }
+        static void onUpdate()
+        {
+
+            // top 1  sZIPFileName,nTransID", "sStatus='3' or sStatus='5' Order by nTransID
+        }
+        static void onStop()
+        {
+
         }
         static void Main(string[] args)
         {
@@ -52,19 +61,21 @@ namespace ConsoleApp
                 ConsoleEventDelegate handler = new ConsoleEventDelegate(ConsoleCloseEventCallback);
                 SetConsoleCtrlHandler(handler, true);
 
-                Log("");
-                Log("Program Processing...");
-                Log("");
+                Log("DNS Resolve...");
+                var clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                clientSocket.Connect("10.0.80.59", 21);
+
+                Log("Program Starting...");
+                Program.onStart();
                 do
                 {
-                    WatchFile();
-                    while(IsWaitForClose)
-                    {
-                        Thread.Sleep(200);
-                        if (IsWaitCompleted) break;
-                    }
-                    if (IsWaitCompleted) break;
+                    Program.onUpdate();
                     Thread.Sleep(Program.nIntervelTime);
+                    if (!IsWaitCompleted) continue;
+
+                    Log("Program Stoping...");
+                    Program.onStop();
+                    if (IsWaitCompleted) break;
                 } while (true);
             }
             catch (Exception ex)
@@ -113,7 +124,7 @@ namespace ConsoleApp
 
         static bool ConsoleCloseEventCallback(CtrlType eventType)
         {
-            Console.WriteLine(eventType.ToString() + " Console window closing, death imminent");
+            Console.WriteLine("Interrup Services closing, death imminent [" + eventType.ToString() + "]");
             IsWaitCompleted = true;
             return true;
         }
